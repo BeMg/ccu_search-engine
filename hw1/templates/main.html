@@ -18,7 +18,10 @@
                 $.getJSON($SCRIPT_ROOT + '/search', {
                     keyword: $('input[name="keyword"]').val(),
                 }, function(data) {
-                   
+                    $("tbody").empty();
+                   for (i=0; i< data.res.length; i++) {
+                     $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res[i].url + ">" + data.res[i].title + "</a></h2> </div>  </div></td></tr>");
+                   }
                 });
             });
         });
@@ -27,7 +30,7 @@
 
 <body>
     <div class="jumbotron text-center">
-        <h1>News Cluster Project</h1>
+        <h1>Search engine Demo</h1>
         <p></p>
     </div>
 
@@ -44,8 +47,8 @@
     </div> 
 
     <div class="row">
-            <div class="col-sm-4"></div>
-            <div class="col-sm-4">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-8">
                     <table class="table">
                             <thead>
                               <tr>
@@ -74,7 +77,7 @@
                             </tbody>
                     </table>                                        
             </div>
-            <div class="col-sm-4">
+            <div class="col-sm-2">
             </div>
     </div>
     
