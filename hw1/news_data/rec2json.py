@@ -33,4 +33,5 @@ for fn in filename:
                     'body':maintext})
 
 
-
+with open('news.json') as f:
+    json.dump(data, f)
