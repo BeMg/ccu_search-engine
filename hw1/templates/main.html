@@ -25,7 +25,7 @@
                 }, function(data) {
                     $("tbody").empty();
                    for (i=0; i< data.res.length; i++) {
-                     $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res[i].url + ">" + data.res[i].title + "</a></h2></div></div> <div class='row'> <div class='col-sm-4'><h6>" + data.res[i].body.substring(0,50) + "</h6></div><div class='col-sm-3'></div></div> </td></tr>");
+                     $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res[i].url + ">" + data.res[i].title + "</a></h2></div></div> <div class='row'> <div class='col-sm-4'><h5>" + data.res[i].body.substring(0,150) + "</h5></div><div class='col-sm-3'></div></div> s</td></tr>");
                    }
                 });
             });
