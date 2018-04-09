@@ -34,9 +34,11 @@
                     start: start_point,
                 }, function(data) {
                     $("tbody").empty();
+                    $("#text1").empty();
                     for (i=0; i< 10; i++) {
                         $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res.response.docs[i].url + ">" + data.res.response.docs[i].title + "</a></h2></div></div> <div class='row'> <div class='col-sm-6'><h4>" + data.res.highlighting[data.res.response.docs[i].id].body[0] + "</h4></div><div class='col-sm-2'></div></div> </td></tr>");
                     }
+                    $("#text1").text("搜尋結果有"+ data.res.response.numFound +"筆。" + "搜尋時間：" + data.res.responseHeader.QTime + "ms")
                     $("#btn2").show();
                 });
             });
@@ -48,9 +50,11 @@
                     start: start_point,
                 }, function(data) {
                     $("tbody").empty();
+                    $("#text1").empty();
                     for (i=0; i< 10; i++) {
                         $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res.response.docs[i].url + ">" + data.res.response.docs[i].title + "</a></h2></div></div> <div class='row'> <div class='col-sm-6'><h4>" + data.res.highlighting[data.res.response.docs[i].id].body[0] + "</h4></div><div class='col-sm-2'></div></div> </td></tr>");
                     }
+                    $("#text1").text("搜尋結果有"+ data.res.response.numFound +"筆。" + "搜尋時間：" + data.res.responseHeader.QTime + "ms")
                     $(window).scrollTop(0);
                 });
             });
@@ -60,10 +64,6 @@
 </head>
 
 <body>
-    <div class="jumbotron text-center">
-        <h1>Search engine Demo</h1>
-        <p></p>
-    </div>
 
     <div class="row">
         <div class="col-sm-4"></div>
@@ -80,6 +80,7 @@
     <div class="row">
             <div class="col-sm-1"></div>
             <div class="col-sm-8">
+                    <p id="text1"></p>
                     <table class="table">
                             <thead>
                               <tr>

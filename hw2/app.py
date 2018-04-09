@@ -12,7 +12,6 @@ def search_result():
     keyword = request.args.get('keyword', ' ', type=str)
     start = request.args.get('start', ' ', type=int)
     res = query(keyword, start, 10)
-    print(res)
     return jsonify(res=res)
 
 if __name__ == "__main__":
