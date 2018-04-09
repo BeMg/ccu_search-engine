@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>search engine hw1</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        em {
+            color: 	#DC143C;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type=text/javascript>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+    <script>
+        var start_point = 0;
+        var processing = false;
+        $(document).ready(function(){
+            
+            $('#usr').keypress(function(e){
+                if(e.keyCode==13)
+                $('#btn1').click();
+            });
+
+            $("#btn1").click(function(){
+                start_point = 0;
+                $.getJSON($SCRIPT_ROOT + '/search', {
+                    keyword: $('input[name="keyword"]').val(),
+                    start: start_point,
+                }, function(data) {
+                    $("tbody").empty();
+                    for (i=0; i< 10; i++) {
+                        $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res.response.docs[i].url + ">" + data.res.response.docs[i].title + "</a></h2></div></div> <div class='row'> <div class='col-sm-6'><h4>" + data.res.highlighting[data.res.response.docs[i].id].body[0] + "</h4></div><div class='col-sm-2'></div></div> </td></tr>");
+                    }
+                    $("#btn2").show();
+                });
+            });
+
+            $("#btn2").click(function(){
+                start_point += 10
+                $.getJSON($SCRIPT_ROOT + '/search', {
+                    keyword: $('input[name="keyword"]').val(),
+                    start: start_point,
+                }, function(data) {
+                    $("tbody").empty();
+                    for (i=0; i< 10; i++) {
+                        $("tbody").append("<tr><td><div class='row'> <div class='col-sm-8'> <h2><a target='_blank' href=" + data.res.response.docs[i].url + ">" + data.res.response.docs[i].title + "</a></h2></div></div> <div class='row'> <div class='col-sm-6'><h4>" + data.res.highlighting[data.res.response.docs[i].id].body[0] + "</h4></div><div class='col-sm-2'></div></div> </td></tr>");
+                    }
+                    $(window).scrollTop(0);
+                });
+            });
+
+        });
+    </script>    
+</head>
+
+<body>
+    <div class="jumbotron text-center">
+        <h1>Search engine Demo</h1>
+        <p></p>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-3">
+            <div class="form-group">
+                <input type="text" class="form-control" id="usr" name="keyword" form="input">
+            </div>
+        </div>
+        <div class="col-sm-2">
+            <button type="button" class="btn" id="btn1">Search</button>
+        </div>
+    </div> 
+
+    <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-8">
+                    <table class="table">
+                            <thead>
+                              <tr>
+                                <th>Result</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                                    <tr>
+                                        <td>
+                                        </td>
+                                    </tr>
+                            </tbody>
+                    </table>                                        
+            </div>
+            <div class="col-sm-2">
+            </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-sm-1"></div>
+        <div class="col-sm-8">
+            <button type="button" class="btn" id="btn2" style="display:none;">Next</button>        
+        </div>
+        <div class="col-sm-2"></div>
+    </div>
+    
+
+</body>
+
+</html>
