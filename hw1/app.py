@@ -10,7 +10,8 @@ def mainpage():
 @app.route('/search')
 def search_result():
     keyword = request.args.get('keyword', ' ', type=str)
-    res = query(keyword)
+    s = request.args.get('start', ' ', type=int)
+    res= query(keyword, s)
     return jsonify(res=res)
 
 if __name__ == "__main__":

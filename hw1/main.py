@@ -1,18 +1,24 @@
 from elasticsearch import Elasticsearch
 import json
 
-def query(keyword):
+def query(keyword, start = 0, rows = 10):
     es = Elasticsearch()
-    tmp = es.search(index='hw1', body={
+
+    tmp = es.search(index='hw2', body={
+        "from" : start, "size": rows,
         "query": {
             "multi_match": {
                 "query" : keyword,
                 "fields" : ["title", "body"]
+            }
+        },
+        "highlight" : {
+            "fields" : {
+                "body" : {}
+            }
         }   
-    }
     })
-    tmp = tmp['hits']['hits']
-    res = []
-    for i in tmp:
-       res.append(i['_source'])
-    return res
+
+    print(len(tmp['hits']['hits']))
+
+    return tmp
