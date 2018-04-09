@@ -1,7 +1,7 @@
 # 網際網路資訊檢索 HW2
 
-- 姓名：
-- 學號：
+- 姓名：陳丕祐
+- 學號：403410061
 
 ## 前言
 
@@ -48,6 +48,12 @@ tar -xvf solr-7.3.0.tgz
 - Collections
 - Collections 的 field
 
+當然，也可以用terminal的工具
+
+```shell
+./bin/solr create -c [collections name] -s [share number] -rf [copy number]
+```
+
 > 要記得新增一個 copy Field，這樣才可以正常進行全文檢索
 
 更新資料
@@ -56,7 +62,37 @@ tar -xvf solr-7.3.0.tgz
 ./bin/post -c [collections name] [json file or other file]
 ```
 
+刪除某個collection全部的資料
 
+```shell
+./bin/solr delete -c [collections name] -d "<delete><query>*:*</query></delete>"
+```
+
+查詢
+
+```
+http://localhost:8983/solr/news/select?hl.fl=[where to highlight]&hl=on&q=[what to query]&rows=[how many result you want]&start=[from where to start]
+```
+
+- hl.fl：選擇那一個field你要進行highlight
+- hl：啟動highlight與否
+- q：你要進行查詢的字串
+- rows：你要得到幾筆結果
+- start：從第幾筆開始
+
+
+
+## 斷詞
+
+斷詞的部份我使用jieba加上來自於萌典的詞彙。
+
+我將斷詞的工作從搜尋引擎中切開來。整個流程會變為下圖
+
+```
+search word -> jieba text segmentation -> query in solr
+```
+
+這樣可以減少在安裝solr+jieba的負擔，就我稍微研究的結果，似乎需要一些java程式的撰寫才能成功。總之我打算放棄這個方法。此外，這樣做的好處就是，不需要 search engine core 支援某一個斷詞服務，反正我們都是在外面就斷好詞，更可以方便的測試各個斷詞的威力如何。
 
 
 
@@ -96,3 +132,39 @@ tar -xvf solr-7.3.0.tgz
 
 ![1523191824686](https://i.imgur.com/M3KxjvM.png)
 
+## 比較
+
+### 配備規格
+
+Cpu：Intel(R) Core(TM) i5-6200U CPU @ 2.30GHz
+
+Ram：8GB
+
+Disk：240GB SSD
+
+### 將資料存入
+
+|             | solr     | elastic  |
+| ----------- | -------- | -------- |
+| store speed | 01:06:41 | 00:45:58 |
+| store size  | 23GB     | 13GB     |
+
+### 執行1000筆query
+
+- elastic search 
+
+![](https://i.imgur.com/h4h3dOU.png)
+
+- solr with jieba
+
+![1523279852258](/tmp/1523279852258.png)
+
+- solr without jieba
+
+![](https://i.imgur.com/dJRXtO4.png)
+
+### 個人感想
+
+這架設的過程，我認為solr在於文件友善的程度遠超於elastic。尤其是solr的quickstart章節，友善且有用，解決了許多我所遭遇的問題。
+
+反而是elastic最喜歡的做的事情就是只給出一個短小的範例，然後一句有看沒有懂的話加以解釋。真的是很不友善，只好依靠強大的社群(stackoverflow)尋求問題的解答。

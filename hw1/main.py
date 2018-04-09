@@ -18,7 +18,4 @@ def query(keyword, start = 0, rows = 10):
             }
         }   
     })
-
-    print(len(tmp['hits']['hits']))
-
     return tmp
