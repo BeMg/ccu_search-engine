@@ -8,15 +8,21 @@ from selenium.webdriver.chrome.options import Options
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 drive = webdriver.Chrome(chrome_options=chrome_options)
+drive.set_page_load_timeout(5)
 
 def getsoup(link):
+    try:
+        alert = drive.switch_to_alert()
+        alert.accept()
+    except:
+        pass
     drive.get(link)
     s = bs4.BeautifulSoup(drive.page_source, 'lxml')
     return s
 
 def getusefullink(link):
     s = getsoup(link)
-    ss = s.findAll('a', attrs={"href": re.compile(".*region.*|.*store.*|.*sign.*|.*prod.*")})
+    ss = s.findAll('a', attrs={"href": re.compile(".*pchome.*(.*region.*|.*store.*|.*sign.*|.*prod.*)")})
     new_link = []
     for i in ss:
         new_link.append(i['href'])
@@ -44,20 +50,32 @@ if __name__=='__main__':
     used_link = set()
     used_link.add(root_link)
 
-    while not wait_link_q.empty() and wait_link_q.qsize() < 500:
-        curr = wait_link_q.get()
-        new_link = getusefullink(curr)
-        new_link = [improvelink(i) for i in new_link]
-
-        for i in new_link:
-            if i in used_link:
-                pass
-            else:
-                used_link.add(i)
-                wait_link_q.put(i)
+    f = open('prod.txt', 'w')
+    cnt = 0
 
     while not wait_link_q.empty():
-        print(wait_link_q.get())
+        curr = wait_link_q.get()
+        print(curr)
+        try:
+            new_link = getusefullink(curr)
+            new_link = [improvelink(i) for i in new_link]
 
+            for i in new_link:
+                if i in used_link:
+                    pass
+                else:
+                    if '/prod/' in i:
+                        f.write(i+'\n')
+                        f.flush()
+                    used_link.add(i)
+                    wait_link_q.put(i)
+        except:
+            wait_link_q.put(curr)
+            print("Fail")
+            drive.close()
+            drive = webdriver.Chrome(chrome_options=chrome_options)
+            drive.set_page_load_timeout(5)
+
+    f.close()
 
 
