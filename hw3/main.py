@@ -91,7 +91,7 @@ if __name__=='__main__':
             wait_link_q.put(curr)
             print("Fail")
             drive.close()
-            drive = webdriver.Chrome(chrome_options=chrome_options)
+            drive = webdriver.Chrome(chrome_options=options)
             drive.set_page_load_timeout(5)
 
     f.close()
