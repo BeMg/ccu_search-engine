@@ -81,11 +81,11 @@ if __name__=='__main__':
                 if i in used_link or 'pchome' not in i:
                     pass
                 else:
+                    used_link.add(i)
                     if '/prod/' in i:
                         f.write(i+'\n')
                         f.flush()
                     else:
-                        used_link.add(i)
                         wait_link_q.put(i)
         except:
             wait_link_q.put(curr)
