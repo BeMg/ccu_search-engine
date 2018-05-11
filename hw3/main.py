@@ -4,10 +4,15 @@ from queue import Queue
 import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
 
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-drive = webdriver.Chrome(chrome_options=chrome_options)
+
+options = Options()
+options.add_argument("--headless")
+drive = webdriver.Chrome(chrome_options=options)
 drive.set_page_load_timeout(5)
 
 def getsoup(link):
@@ -17,12 +22,13 @@ def getsoup(link):
     except:
         pass
     drive.get(link)
+
     s = bs4.BeautifulSoup(drive.page_source, 'lxml')
     return s
 
 def getusefullink(link):
     s = getsoup(link)
-    ss = s.findAll('a', attrs={"href": re.compile(".*pchome.*(.*region.*|.*store.*|.*sign.*|.*prod.*)")})
+    ss = s.findAll('a', attrs={"href": re.compile(".*region.*|.*store.*|.*sign.*|.*prod.*")})
     new_link = []
     for i in ss:
         new_link.append(i['href'])
@@ -38,10 +44,21 @@ def improvelink(link):
     return rst
 
 def getcontent(link):
-    pass
+
+    drive.get(link)
+
+    WebDriverWait(drive, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="SloganContainer" and text() != ""]')))
+
+    s = bs4.BeautifulSoup(drive.page_source, 'lxml')
+
+    name = s.find('h5', {"id" : "NickContainer"}).text
+    slogan = s.find('div', {"id" : "SloganContainer"}).text
+    price = s.find('span', {"id" : "PriceTotal"}).text
+    return (name, slogan, price)
 
 
 if __name__=='__main__':
+
     root_link = 'https://24h.pchome.com.tw/'
 
     wait_link_q = Queue()
@@ -61,14 +78,15 @@ if __name__=='__main__':
             new_link = [improvelink(i) for i in new_link]
 
             for i in new_link:
-                if i in used_link:
+                if i in used_link or 'pchome' no in i:
                     pass
                 else:
                     if '/prod/' in i:
                         f.write(i+'\n')
                         f.flush()
-                    used_link.add(i)
-                    wait_link_q.put(i)
+                    else:
+                        used_link.add(i)
+                        wait_link_q.put(i)
         except:
             wait_link_q.put(curr)
             print("Fail")
