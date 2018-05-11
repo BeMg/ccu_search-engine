@@ -78,7 +78,7 @@ if __name__=='__main__':
             new_link = [improvelink(i) for i in new_link]
 
             for i in new_link:
-                if i in used_link or 'pchome' no in i:
+                if i in used_link or 'pchome' not in i:
                     pass
                 else:
                     if '/prod/' in i:
