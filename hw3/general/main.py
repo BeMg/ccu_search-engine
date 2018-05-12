@@ -66,17 +66,29 @@ class storage:
     def __init__(self):
         self.filename = ''
         self.tag_name = []
-        self.tag_rule = []
+        self.table_name = ''
 
     def set_filename(self, filename):
         self.filename = filename
 
-    def create_db(self, table_name, tag_name):
+    def set_table_name(self, table_name):
+        self.table_name = table_name
+
+    def create_db(self, tag_name):
+        self.tag_name = tag_name
         tag_name = [i+' text' for i in tag_name]
         tag_element = ", ".join(tag_name)
         conn = sqlite3.connect(self.filename)
         c = conn.cursor()
-        c.execute('CREATE TABLE if not exists {} ( {} )'.format(table_name, tag_element))
+        c.execute('CREATE TABLE if not exists {} ( {} )'.format(self.table_name, tag_element))
+        conn.commit()
+        conn.close()
+
+    def insert_db(self, data):
+        conn = sqlite3.connect(self.filename)
+        c = conn.cursor()
+        element = ','.join(['?' for i in range(len(self.tag_name))])
+        c.executemany('INSERT INTO {} VALUES ( {} )'.format(self.table_name, element), data)
         conn.commit()
         conn.close()
 
@@ -120,16 +132,20 @@ class crawl:
     def run(self):
         s = storage()
         s.set_filename(self.filename)
-        s.create_db('data', self.tag_name)
+        s.set_table_name('data')
+        s.create_db(self.tag_name)
+        s.insert_db([('123', '456')])
         s.drop_db('data')
 
 
 
+
+
 if __name__=='__main__':
-    a = crawl()
-    a.set_root_link('https://24h.pchome.com.tw/')
-    a.set_filename('pchomeData.db')
-    a.set_link_rule(lambda soup: soup.find('a', {'href': '.*'}))
-    a.set_content_rule('a', lambda x: x)
-    a.set_content_rule('b', lambda x: x)
-    a.run()
+    c = crawl()
+    c.set_root_link('https://24h.pchome.com.tw/')
+    c.set_filename('pchomeData.db')
+    c.set_link_rule(lambda soup: soup.find('a', {'href': '.*'}))
+    c.set_content_rule('a', lambda x: x)
+    c.set_content_rule('b', lambda x: x)
+    c.run()
