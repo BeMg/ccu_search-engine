@@ -71,12 +71,21 @@ class storage:
     def set_filename(self, filename):
         self.filename = filename
 
-    def set_tag(self, tag):
-        self.tag_name = [i[0] for i in tag]
-        self.tag_rule = [i[1] for i in tag]
+    def create_db(self, table_name, tag_name):
+        tag_name = [i+' text' for i in tag_name]
+        tag_element = ", ".join(tag_name)
+        conn = sqlite3.connect(self.filename)
+        c = conn.cursor()
+        c.execute('CREATE TABLE if not exists {} ( {} )'.format(table_name, tag_element))
+        conn.commit()
+        conn.close()
 
-    def create_db(self, table_name):
-
+    def drop_db(self, table_name):
+        conn = sqlite3.connect(self.filename)
+        c = conn.cursor()
+        c.execute('drop table if exists {}'.format(table_name))
+        conn.commit()
+        conn.close()
 
     def store_as_single_file(self, filename, content):
         pass
@@ -84,7 +93,8 @@ class storage:
 class crawl:
 
     def __init__(self):
-        self.content_rule = []
+        self.tag_name = []
+        self.tag_rule = []
         self.root_link = ''
         self.filename = ''
         self.link_rule = None
@@ -101,16 +111,25 @@ class crawl:
     # content rule could be many, and it also define the tag of data
     # rule format look like as tag_name, tag_rule->Be a function which f(soup)->string
     def set_content_rule(self, tag_name, tag_rule):
-        self.content_rule += (tag_name, tag_rule)
+        self.tag_name.append(tag_name)
+        self.tag_rule.append(tag_rule)
 
     def set_filename(self, filename):
         self.filename = filename
 
     def run(self):
         s = storage()
-        s.create_db()
+        s.set_filename(self.filename)
+        s.create_db('data', self.tag_name)
+        s.drop_db('data')
 
 
 
 if __name__=='__main__':
-
+    a = crawl()
+    a.set_root_link('https://24h.pchome.com.tw/')
+    a.set_filename('pchomeData.db')
+    a.set_link_rule(lambda soup: soup.find('a', {'href': '.*'}))
+    a.set_content_rule('a', lambda x: x)
+    a.set_content_rule('b', lambda x: x)
+    a.run()
