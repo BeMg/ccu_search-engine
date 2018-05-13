@@ -5,6 +5,8 @@ import queue
 import sqlite3
 import time
 import re
+import multiprocessing as MP
+
 
 class fetcher:
 
@@ -13,9 +15,6 @@ class fetcher:
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
         self.driver.set_page_load_timeout(5)
-
-    def __del__(self):
-        self.driver.close()
 
     def getsoup(self, link, sleep_time=0):
         self.driver.get(link)
@@ -30,7 +29,6 @@ class fetcher:
         return s
 
     def restart(self):
-        self.driver.close()
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
@@ -111,9 +109,6 @@ class storage:
         conn.commit()
         conn.close()
 
-    def store_as_single_file(self, filename, content):
-        pass
-
 class crawl:
 
     def __init__(self):
@@ -167,6 +162,7 @@ class crawl:
         p.set_tag_rule(self.tag_rule)
 
         self.wait_q.put(self.start_link)
+        self.used_link.add(self.start_link)
 
         while not self.wait_q.empty():
             curr = self.wait_q.get()
@@ -192,9 +188,102 @@ class crawl:
                 f.restart()
                 self.wait_q.put(curr)
 
+    def get_content(self, link, cnt , f, p, q):
+        try:
+            rst = p.anaysis_content(f.getsoup(link))
+            q.put((link, cnt, rst))
+        except:
+            q.put((link, cnt, None))
+        print("{} DONE".format(cnt))
+
+
+    def get_link(self, link, cnt, f, p, q):
+        try:
+            rst = p.anaysis_link(f.getsoup(link))
+            q.put((link, cnt, rst))
+        except:
+            q.put((link, cnt, None))
+        print("{} DONE".format(cnt))
+
+    def run_with_parallel(self, n_core=MP.cpu_count()):
+        s = storage()
+        s.set_filename(self.filename)
+        s.set_table_name('data')
+        s.create_db(self.tag_name)
+
+        p = parser()
+
+        p = []
+        f = []
+        for i in range(n_core):
+            tmp_p = parser()
+            tmp_p.set_root_link(self.root_link)
+            tmp_p.set_link_rule(self.link_rule)
+            tmp_p.set_tag_rule(self.tag_rule)
+            p.append(tmp_p)
+            f.append(fetcher())
+
+        self.wait_q.put(self.start_link)
+        self.used_link.add(self.start_link)
+
+        while not self.wait_q.empty():
+            cnt = 0
+            P = []
+            content_q = MP.Queue()
+            link_q = MP.Queue()
+            for i in range(n_core):
+                if self.wait_q.empty():
+                    break
+                else:
+                    curr = self.wait_q.get()
+                    print(curr)
+                    if self.link_checker(curr):
+                        P.append(MP.Process(target=self.get_content,
+                                            args=(curr, cnt, f[cnt], p[cnt], content_q)))
+                        cnt += 1
+                    else:
+                        P.append(MP.Process(target=self.get_link,
+                                            args=(curr, cnt, f[cnt], p[cnt], link_q)))
+                        cnt += 1
+
+            for tmp_p in P:
+                tmp_p.start()
+                print(tmp_p.pid)
+
+            for tmp_p in P:
+                tmp_p.join(8)
+
+            for tmp_p in P:
+                if tmp_p.is_alive():
+                    tmp_p.terminate()
+
+            data = []
+            while not content_q.empty():
+                link, ct, rst = content_q.get()
+                if rst == None:
+                    print("FAIL IN {}".format(link))
+                    self.wait_q.put(link)
+                    f[ct].restart()
+                else:
+                    data.append(rst)
+
+            while not link_q.empty():
+                link, ct, rst = link_q.get()
+                if rst == None:
+                    print("FAIL IN {}".format(link))
+                    self.wait_q.put(link)
+                    f[ct].restart()
+                else:
+                    for i in rst:
+                        if i not in self.used_link:
+                            self.wait_q.put(i)
+                            self.used_link.add(i)
+                        else:
+                            pass
 
 
 if __name__=='__main__':
+
     c = crawl()
     c.set_root_link('http://www.books.com.tw')
     c.set_filename('booksData.db')
@@ -218,4 +307,50 @@ if __name__=='__main__':
         'price',
         lambda s: s.find('b', itemprop='price').text
     )
-    c.run()
+    c.run_with_parallel()
+
+
+    # c = crawl()
+    # c.set_root_link('http://www.books.com.tw')
+    # c.set_filename('booksData.db')
+    #
+    # def f1(s):
+    #     return '/products/' in s
+    #
+    # def f2(s):
+    #     return s.findAll('a', attrs={"href": re.compile(".*books.com.tw.*")})
+    #
+    # def f3(s):
+    #     return s.find('h1', itemprop='name').text
+    #
+    # def f4(s):
+    #     return s.find('li', itemprop='author').find('a', attrs={'href': re.compile('.*search.*')}).text
+    #
+    # def f5(s):
+    #     return s.find('span', itemprop='brand').text
+    #
+    # def f6(s):
+    #     return s.find('b', itemprop='price').text
+    #
+    # c.set_link_checker(f1)
+    # c.set_link_rule(
+    #     f2
+    # )
+    #
+    # c.set_content_rule(
+    #     'name',
+    #     f3
+    # )
+    # c.set_content_rule(
+    #     'author',
+    #     f4
+    # )
+    # c.set_content_rule(
+    #     'publisher',
+    #     f5
+    # )
+    # c.set_content_rule(
+    #     'price',
+    #     f6
+    # )
+    # c.run_with_parallel()
