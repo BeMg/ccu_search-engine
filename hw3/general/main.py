@@ -91,6 +91,7 @@ class storage:
         tag_element = ", ".join(tag_name)
         conn = sqlite3.connect(self.filename)
         c = conn.cursor()
+        self.drop_db(self.table_name)
         c.execute('CREATE TABLE if not exists {} ( {} )'.format(self.table_name, tag_element))
         conn.commit()
         conn.close()
@@ -119,6 +120,7 @@ class crawl:
         self.tag_name = []
         self.tag_rule = []
         self.root_link = ''
+        self.start_link = ''
         self.filename = ''
         # f(soup) -> list of link
         self.link_rule = None
@@ -130,6 +132,7 @@ class crawl:
 
     def set_root_link(self, link):
         self.root_link = link
+        self.start_link = link
 
     # rule will be one function
     def set_link_rule(self, rule):
@@ -148,6 +151,9 @@ class crawl:
     def set_link_checker(self, checker):
         self.link_checker = checker
 
+    def set_start_link(self, link):
+        self.start_link = 'http://www.books.com.tw/products/0010637918'
+
     def run(self):
         s = storage()
         s.set_filename(self.filename)
@@ -160,7 +166,7 @@ class crawl:
         p.set_link_rule(self.link_rule)
         p.set_tag_rule(self.tag_rule)
 
-        self.wait_q.put(self.root_link)
+        self.wait_q.put(self.start_link)
 
         while not self.wait_q.empty():
             curr = self.wait_q.get()
@@ -170,7 +176,7 @@ class crawl:
 
                 if self.link_checker(curr):
                     data = p.anaysis_content(soup)
-                    s.insert_db(data)
+                    s.insert_db([data])
                 else:
                     pass
 
@@ -181,21 +187,35 @@ class crawl:
                     else:
                         self.wait_q.put(i)
                         self.used_link.add(i)
-            except:
+            except :
                 print("FAIL")
                 f.restart()
                 self.wait_q.put(curr)
 
+
+
 if __name__=='__main__':
     c = crawl()
-    c.set_root_link('https://24h.pchome.com.tw/')
-    c.set_filename('pchomeData.db')
-    c.set_link_checker(lambda s: '/prod/' in s)
+    c.set_root_link('http://www.books.com.tw')
+    c.set_filename('booksData.db')
+    c.set_link_checker(lambda s: '/products/' in s)
     c.set_link_rule(
-        lambda soup: soup.findAll('a', attrs={"href": re.compile(".*region.*|.*store.*|.*sign.*|.*prod.*")})
+        lambda soup: soup.findAll('a', attrs={"href": re.compile(".*books.com.tw.*")})
     )
-    c.set_content_rule('name',
-                       lambda s: s.find('h5', {"id" : "NickContainer"}).text)
-    c.set_content_rule('price',
-                       lambda s: s.find('span', {"id" : "PriceTotal"}).text)
+    c.set_content_rule(
+        'name',
+        lambda s: s.find('h1', itemprop='name').text
+    )
+    c.set_content_rule(
+        'author',
+        lambda s: s.find('li', itemprop='author').find('a', attrs={'href': re.compile('.*search.*')}).text
+    )
+    c.set_content_rule(
+        'publisher',
+        lambda s: s.find('span', itemprop='brand').text
+    )
+    c.set_content_rule(
+        'price',
+        lambda s: s.find('b', itemprop='price').text
+    )
     c.run()
