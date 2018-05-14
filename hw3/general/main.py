@@ -30,6 +30,10 @@ class fetcher:
     def get_curr_link(self):
         return self.driver.current_url
 
+    def close_alert(self):
+        alert = self.driver.switch_to_alert()
+        alert.accept()
+
     def get_curr_page_source(self):
         return self.driver.page_source
 
@@ -340,16 +344,23 @@ class crawl:
                     curr_request.append(curr)
                     print(curr)
                     f.getsoup_with_newtab(curr)
+                    try:
+                        f.close_alert()
+                    except:
+                        pass
                     time.sleep(0.1)
 
             handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
             data = []
             curr_request.reverse()
 
-            for handle in handles:
+            for i, handle in enumerate(handles):
                 f.close_tab()
                 f.switch_to_windows(handle)
-                data.append((f.get_curr_link(), f.get_curr_page_source()))
+                try:
+                    data.append((f.get_curr_link(), f.get_curr_page_source()))
+                except:
+                    print("Load page time out")
                 cnt+=1
                 time.sleep(0.1)
 
