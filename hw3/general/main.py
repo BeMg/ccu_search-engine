@@ -49,6 +49,12 @@ class fetcher:
         s = bs4.BeautifulSoup(self.driver.page_source, 'lxml')
         return s
 
+    def close_brower(self):
+        handles = self.driver.window_handles
+        for handle in handles:
+            self.driver.switch_to_window(handle)
+            self.driver.close()
+
     def restart(self):
         self.driver.close()
         options = Options()
@@ -336,19 +342,26 @@ class crawl:
             curr_request = []
             cnt = 0
 
-            for i in range(n_core):
-                if self.wait_q.empty():
-                    break
-                else:
-                    curr = self.wait_q.get()
-                    curr_request.append(curr)
-                    print(curr)
-                    f.getsoup_with_newtab(curr)
-                    try:
-                        f.close_alert()
-                    except:
-                        pass
-                    time.sleep(0.1)
+            try:
+                for i in range(n_core):
+                    if self.wait_q.empty():
+                        break
+                    else:
+                        curr = self.wait_q.get()
+                        curr_request.append(curr)
+                        print(curr)
+                        f.getsoup_with_newtab(curr)
+                        try:
+                            f.close_alert()
+                        except:
+                            pass
+                        time.sleep(0.1)
+            except:
+                print("Brower Crash")
+                for i in curr_request:
+                    self.wait_q.put(i)
+                f.close_brower()
+                continue
 
             handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
             data = []
@@ -363,8 +376,8 @@ class crawl:
                     print("Load page time out")
                 cnt+=1
                 time.sleep(0.1)
-
             f.close_tab()
+
 
             for d in data:
                 link = d[0]
