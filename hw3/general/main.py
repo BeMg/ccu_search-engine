@@ -15,6 +15,9 @@ class fetcher:
         self.driver = webdriver.Chrome(chrome_options=options)
         self.driver.set_page_load_timeout(5)
 
+    def __del__(self):
+        self.driver.quit()
+
     def getsoup(self, link, sleep_time=0):
         self.driver.get(link)
         time.sleep(sleep_time)
@@ -40,9 +43,6 @@ class fetcher:
     def switch_to_windows(self, h):
         self.driver.switch_to_window(h)
 
-    def close_tab(self):
-        self.driver.close()
-
     def getsoup_with_wait(self, link, wait_function):
         self.driver.get(link)
         wait_function(self.driver)
@@ -56,7 +56,7 @@ class fetcher:
             self.driver.close()
 
     def restart(self):
-        self.driver.close()
+        self.driver.quit()
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
@@ -80,7 +80,7 @@ class parser:
 
     # Some website href is not absolute link, but relative link
     def link_complete(self, link):
-        if 'http' in link:
+        if 'http' in link[:30]:
             rst = link
         elif self.root_link[10:] in link:
             rst = 'https:' + link
@@ -342,37 +342,33 @@ class crawl:
             curr_request = []
             cnt = 0
 
-            for i in range(n_core):
-                if self.wait_q.empty():
-                    break
-                else:
-                    curr = self.wait_q.get()
-                    curr_request.append(curr)
-                    print(curr)
-                    f.getsoup_with_newtab(curr)
-                    try:
-                        f.close_alert()
-                    except:
-                        pass
-                    time.sleep(0.1)
-
-            handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
-            data = []
-            curr_request.reverse()
-
             try:
+                for i in range(n_core):
+                    if self.wait_q.empty():
+                        break
+                    else:
+                        curr = self.wait_q.get()
+                        curr_request.append(curr)
+                        print(curr)
+                        f.getsoup_with_newtab(curr)
+
+                handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
+                data = []
+                curr_request.reverse()
+
                 for i, handle in enumerate(handles):
-                    f.close_tab()
                     f.switch_to_windows(handle)
                     try:
-                        data.append((f.get_curr_link(), f.get_curr_page_source()))
+                        data.append((curr_request[i], f.get_curr_page_source()))
                     except:
+                        self.wait_q.put(curr_request[i])
                         print("Load page time out")
+                        n_core = max(n_core-2, 1)
                     cnt+=1
-                    time.sleep(0.1)
-                f.close_tab()
+                n_core = min(n_core+1, 20)
             except:
-                print("Brower Crash")
+                print("Browser Crash")
+                n_core = max(n_core//2, 1)
                 for i in curr_request:
                     self.wait_q.put(i)
                 f.close_brower()
@@ -387,13 +383,14 @@ class crawl:
                         content = p.anaysis_content(soup)
                         s.insert_db([content])
                     else:
-                        new_link = p.anaysis_link(soup)
-                        for nl in new_link:
-                            if nl not in self.used_link:
-                                self.used_link.add(nl)
-                                self.wait_q.put(nl)
-                            else:
-                                pass
+                        pass
+                    new_link = p.anaysis_link(soup)
+                    for nl in new_link:
+                        if nl not in self.used_link:
+                            self.used_link.add(nl)
+                            self.wait_q.put(nl)
+                        else:
+                            pass
                 except Exception as e:
                     print(str(e))
                     print("FAIL {}".format(link))
