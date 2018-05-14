@@ -342,41 +342,41 @@ class crawl:
             curr_request = []
             cnt = 0
 
+            for i in range(n_core):
+                if self.wait_q.empty():
+                    break
+                else:
+                    curr = self.wait_q.get()
+                    curr_request.append(curr)
+                    print(curr)
+                    f.getsoup_with_newtab(curr)
+                    try:
+                        f.close_alert()
+                    except:
+                        pass
+                    time.sleep(0.1)
+
+            handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
+            data = []
+            curr_request.reverse()
+
             try:
-                for i in range(n_core):
-                    if self.wait_q.empty():
-                        break
-                    else:
-                        curr = self.wait_q.get()
-                        curr_request.append(curr)
-                        print(curr)
-                        f.getsoup_with_newtab(curr)
-                        try:
-                            f.close_alert()
-                        except:
-                            pass
-                        time.sleep(0.1)
+                for i, handle in enumerate(handles):
+                    f.close_tab()
+                    f.switch_to_windows(handle)
+                    try:
+                        data.append((f.get_curr_link(), f.get_curr_page_source()))
+                    except:
+                        print("Load page time out")
+                    cnt+=1
+                    time.sleep(0.1)
+                f.close_tab()
             except:
                 print("Brower Crash")
                 for i in curr_request:
                     self.wait_q.put(i)
                 f.close_brower()
                 continue
-
-            handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
-            data = []
-            curr_request.reverse()
-
-            for i, handle in enumerate(handles):
-                f.close_tab()
-                f.switch_to_windows(handle)
-                try:
-                    data.append((f.get_curr_link(), f.get_curr_page_source()))
-                except:
-                    print("Load page time out")
-                cnt+=1
-                time.sleep(0.1)
-            f.close_tab()
 
 
             for d in data:
