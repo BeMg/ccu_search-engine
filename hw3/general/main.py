@@ -9,7 +9,6 @@ import multiprocessing as MP
 
 
 class fetcher:
-
     def __init__(self):
         options = Options()
         options.add_argument("--headless")
@@ -22,6 +21,24 @@ class fetcher:
         s = bs4.BeautifulSoup(self.driver.page_source, 'lxml')
         return s
 
+    def getsoup_with_newtab(self, link):
+        self.driver.execute_script('window.open("{}", "_blank")'.format(link))
+
+    def get_curr_windos_handles(self):
+        return self.driver.window_handles
+
+    def get_curr_link(self):
+        return self.driver.current_url
+
+    def get_curr_page_source(self):
+        return self.driver.page_source
+
+    def switch_to_windows(self, h):
+        self.driver.switch_to_window(h)
+
+    def close_tab(self):
+        self.driver.close()
+
     def getsoup_with_wait(self, link, wait_function):
         self.driver.get(link)
         wait_function(self.driver)
@@ -29,6 +46,7 @@ class fetcher:
         return s
 
     def restart(self):
+        self.driver.close()
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
@@ -67,9 +85,19 @@ class parser:
         return link
 
     def anaysis_content(self, soup):
-        rst = [i(soup) for i in self.tag_rule]
-        return tuple(rst)
+        rst = []
+        for i in self.tag_rule:
+            try:
+                rst.append(i(soup))
+            except:
+                rst.append(None)
+        if any(rst):
+            print(rst)
+            return tuple(rst)
+        else:
+            raise ValueError('content ERROR')
 
+# Maybe default add link in db
 class storage:
 
     def __init__(self):
@@ -115,7 +143,7 @@ class crawl:
         self.tag_name = []
         self.tag_rule = []
         self.root_link = ''
-        self.start_link = ''
+        self.start_links = []
         self.filename = ''
         # f(soup) -> list of link
         self.link_rule = None
@@ -127,7 +155,7 @@ class crawl:
 
     def set_root_link(self, link):
         self.root_link = link
-        self.start_link = link
+        self.start_links.append(link)
 
     # rule will be one function
     def set_link_rule(self, rule):
@@ -147,7 +175,7 @@ class crawl:
         self.link_checker = checker
 
     def set_start_link(self, link):
-        self.start_link = 'http://www.books.com.tw/products/0010637918'
+        self.start_links.append(link)
 
     def run(self):
         s = storage()
@@ -161,8 +189,9 @@ class crawl:
         p.set_link_rule(self.link_rule)
         p.set_tag_rule(self.tag_rule)
 
-        self.wait_q.put(self.start_link)
-        self.used_link.add(self.start_link)
+        for start_link in self.start_links:
+            self.wait_q.put(start_link)
+            self.used_link.add(start_link)
 
         while not self.wait_q.empty():
             curr = self.wait_q.get()
@@ -196,7 +225,6 @@ class crawl:
             q.put((link, cnt, None))
         print("{} DONE".format(cnt))
 
-
     def get_link(self, link, cnt, f, p, q):
         try:
             rst = p.anaysis_link(f.getsoup(link))
@@ -223,8 +251,9 @@ class crawl:
             p.append(tmp_p)
             f.append(fetcher())
 
-        self.wait_q.put(self.start_link)
-        self.used_link.add(self.start_link)
+        for start_link in self.start_links:
+            self.wait_q.put(start_link)
+            self.used_link.add(start_link)
 
         while not self.wait_q.empty():
             cnt = 0
@@ -281,9 +310,73 @@ class crawl:
                         else:
                             pass
 
+    def run_with_mutilttab(self, n_core=MP.cpu_count()):
+        s = storage()
+        s.set_filename(self.filename)
+        s.set_table_name('data')
+        s.create_db(self.tag_name)
+
+        p = parser()
+        p.set_root_link(self.root_link)
+        p.set_link_rule(self.link_rule)
+        p.set_tag_rule(self.tag_rule)
+
+        for start_link in self.start_links:
+            self.wait_q.put(start_link)
+            self.used_link.add(start_link)
+
+        while not self.wait_q.empty():
+
+            f = fetcher()
+            curr_handle = f.get_curr_windos_handles()[0]
+            curr_request = []
+            cnt = 0
+
+            for i in range(n_core):
+                if self.wait_q.empty():
+                    break
+                else:
+                    curr = self.wait_q.get()
+                    curr_request.append(curr)
+                    print(curr)
+                    f.getsoup_with_newtab(curr)
+                    time.sleep(0.1)
+
+            handles = [i for i in f.get_curr_windos_handles() if i != curr_handle]
+            data = []
+            curr_request.reverse()
+
+            for handle in handles:
+                f.close_tab()
+                f.switch_to_windows(handle)
+                data.append((f.get_curr_link(), f.get_curr_page_source()))
+                cnt+=1
+                time.sleep(0.1)
+
+            f.close_tab()
+
+            for d in data:
+                link = d[0]
+                soup = bs4.BeautifulSoup(d[1], 'lxml')
+                try:
+                    if self.link_checker(link):
+                        content = p.anaysis_content(soup)
+                        s.insert_db([content])
+                    else:
+                        new_link = p.anaysis_link(soup)
+                        for nl in new_link:
+                            if nl not in self.used_link:
+                                self.used_link.add(nl)
+                                self.wait_q.put(nl)
+                            else:
+                                pass
+                except Exception as e:
+                    print(str(e))
+                    print("FAIL {}".format(link))
+                    self.wait_q.put(link)
+
 
 if __name__=='__main__':
-
     c = crawl()
     c.set_root_link('http://www.books.com.tw')
     c.set_filename('booksData.db')
@@ -293,11 +386,11 @@ if __name__=='__main__':
     )
     c.set_content_rule(
         'name',
-        lambda s: s.find('h1', itemprop='name').text
+        lambda s: s.find('h1').text
     )
     c.set_content_rule(
         'author',
-        lambda s: s.find('li', itemprop='author').find('a', attrs={'href': re.compile('.*search.*')}).text
+        lambda s: s.find('a', attrs={'href': re.compile('.*search.*author.*')}).text
     )
     c.set_content_rule(
         'publisher',
@@ -307,50 +400,4 @@ if __name__=='__main__':
         'price',
         lambda s: s.find('b', itemprop='price').text
     )
-    c.run_with_parallel()
-
-
-    # c = crawl()
-    # c.set_root_link('http://www.books.com.tw')
-    # c.set_filename('booksData.db')
-    #
-    # def f1(s):
-    #     return '/products/' in s
-    #
-    # def f2(s):
-    #     return s.findAll('a', attrs={"href": re.compile(".*books.com.tw.*")})
-    #
-    # def f3(s):
-    #     return s.find('h1', itemprop='name').text
-    #
-    # def f4(s):
-    #     return s.find('li', itemprop='author').find('a', attrs={'href': re.compile('.*search.*')}).text
-    #
-    # def f5(s):
-    #     return s.find('span', itemprop='brand').text
-    #
-    # def f6(s):
-    #     return s.find('b', itemprop='price').text
-    #
-    # c.set_link_checker(f1)
-    # c.set_link_rule(
-    #     f2
-    # )
-    #
-    # c.set_content_rule(
-    #     'name',
-    #     f3
-    # )
-    # c.set_content_rule(
-    #     'author',
-    #     f4
-    # )
-    # c.set_content_rule(
-    #     'publisher',
-    #     f5
-    # )
-    # c.set_content_rule(
-    #     'price',
-    #     f6
-    # )
-    # c.run_with_parallel()
+    c.run_with_mutilttab(10)
