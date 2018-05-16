@@ -11,7 +11,7 @@ import multiprocessing as MP
 class fetcher:
     def __init__(self):
         options = Options()
-        options.add_argument("--headless")
+        # options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
         self.driver.set_page_load_timeout(5)
 
@@ -162,6 +162,7 @@ class crawl:
         self.wait_q = queue.Queue()
         self.used_link = set()
         self.core_nunber = 1
+        self.n_page = 0
 
     def set_root_link(self, link):
         self.root_link = link
@@ -374,7 +375,6 @@ class crawl:
                 f.close_brower()
                 continue
 
-
             for d in data:
                 link = d[0]
                 soup = bs4.BeautifulSoup(d[1], 'lxml')
@@ -391,34 +391,31 @@ class crawl:
                             self.wait_q.put(nl)
                         else:
                             pass
+                    self.n_page += 1
                 except Exception as e:
                     print(str(e))
                     print("FAIL {}".format(link))
                     self.wait_q.put(link)
-
+            print("Already crawl {} page".format(self.n_page))
 
 if __name__=='__main__':
     c = crawl()
-    c.set_root_link('http://www.books.com.tw')
-    c.set_filename('booksData.db')
-    c.set_link_checker(lambda s: '/products/' in s)
+    c.set_root_link('https://store.steampowered.com/')
+    c.set_filename('steamData.db')
+    c.set_link_checker(lambda s: '/app/' in s)
     c.set_link_rule(
-        lambda soup: soup.findAll('a', attrs={"href": re.compile(".*books.com.tw.*")})
+        lambda soup: soup.findAll('a', attrs={"href": re.compile(".*store\.steampowered\.com.*")})
     )
     c.set_content_rule(
         'name',
-        lambda s: s.find('h1').text
+        lambda s: s.find('h1').text[4:]
     )
     c.set_content_rule(
-        'author',
-        lambda s: s.find('a', attrs={'href': re.compile('.*search.*author.*')}).text
+        'about',
+        lambda s: s.find('div', id='game_area_description').text
     )
     c.set_content_rule(
         'publisher',
         lambda s: s.find('span', itemprop='brand').text
-    )
-    c.set_content_rule(
-        'price',
-        lambda s: s.find('b', itemprop='price').text
     )
     c.run_with_mutilttab(10)
