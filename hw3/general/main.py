@@ -11,7 +11,7 @@ import multiprocessing as MP
 class fetcher:
     def __init__(self):
         options = Options()
-        # options.add_argument("--headless")
+        options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
         self.driver.set_page_load_timeout(5)
 
@@ -413,9 +413,5 @@ if __name__=='__main__':
     c.set_content_rule(
         'about',
         lambda s: s.find('div', id='game_area_description').text
-    )
-    c.set_content_rule(
-        'publisher',
-        lambda s: s.find('span', itemprop='brand').text
     )
     c.run_with_mutilttab(10)
