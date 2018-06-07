@@ -33,6 +33,14 @@ class fetcher:
     def get_curr_link(self):
         return self.driver.current_url
 
+    def get_all_href(self):
+        elements = self.driver.find_element_by_xpath('//a[@href]')
+        result = []
+        for element in elements:
+            link = element.get_attribute('href')
+            result.append(link)
+        return result
+
     def close_alert(self):
         alert = self.driver.switch_to_alert()
         alert.accept()
@@ -79,20 +87,20 @@ class parser:
         self.root_link = root_link
 
     # Some website href is not absolute link, but relative link
-    def link_complete(self, link):
-        if 'http' in link[:30]:
-            rst = link
-        elif self.root_link[10:] in link:
-            rst = 'https:' + link
-        else:
-            rst = self.root_link + link
-        return rst
-
-    def anaysis_link(self, soup):
-        link = self.link_rule(soup)
-        link = [i['href'] for i in link]
-        link = [self.link_complete(i) for i in link]
-        return link
+    # def link_complete(self, link):
+    #     if 'http' in link[:30]:
+    #         rst = link
+    #     elif self.root_link[10:] in link:
+    #         rst = 'https:' + link
+    #     else:
+    #         rst = self.root_link + link
+    #     return rst
+    #
+    # def anaysis_link(self, soup):
+    #     link = self.link_rule(soup)
+    #     link = [i['href'] for i in link]
+    #     link = [self.link_complete(i) for i in link]
+    #     return link
 
     def anaysis_content(self, soup):
         rst = []
