@@ -11,9 +11,9 @@ import multiprocessing as MP
 class fetcher:
     def __init__(self):
         options = Options()
-        options.add_argument("--headless")
+        # options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
-        self.driver.set_page_load_timeout(5)
+        self.driver.set_page_load_timeout(20)
 
     def __del__(self):
         self.driver.quit()
@@ -34,7 +34,7 @@ class fetcher:
         return self.driver.current_url
 
     def get_all_href(self):
-        elements = self.driver.find_element_by_xpath('//a[@href]')
+        elements = self.driver.find_elements_by_xpath('//a[@href]')
         result = []
         for element in elements:
             link = element.get_attribute('href')
@@ -101,6 +101,15 @@ class parser:
     #     link = [i['href'] for i in link]
     #     link = [self.link_complete(i) for i in link]
     #     return link
+
+    def link_filter(self, link):
+        rst = []
+        for i in link:
+            if self.link_rule(i) == True:
+                rst.append(i)
+            else:
+                pass
+        return rst
 
     def anaysis_content(self, soup):
         rst = []
@@ -274,6 +283,7 @@ class crawl:
             curr_handle = f.get_curr_windos_handles()[0]
             curr_request = []
             cnt = 0
+            link_tmp = []
 
             try:
                 for i in range(n_core):
@@ -291,6 +301,7 @@ class crawl:
 
                 for i, handle in enumerate(handles):
                     f.switch_to_windows(handle)
+                    link_tmp += f.get_all_href()
                     try:
                         data.append((curr_request[i], f.get_curr_page_source()))
                     except:
@@ -299,7 +310,8 @@ class crawl:
                         n_core = max(n_core-2, 1)
                     cnt+=1
                 n_core = min(n_core+1, 20)
-            except:
+            except Exception as e:
+                print(str(e))
                 print("Browser Crash")
                 n_core = max(n_core//2, 1)
                 for i in curr_request:
@@ -316,7 +328,8 @@ class crawl:
                         s.insert_db([content])
                     else:
                         pass
-                    new_link = p.anaysis_link(soup)
+
+                    new_link = p.link_filter(link_tmp)
                     for nl in new_link:
                         if nl not in self.used_link:
                             self.used_link.add(nl)
@@ -336,7 +349,7 @@ if __name__=='__main__':
     c.set_filename('steamData.db')
     c.set_link_checker(lambda s: '/app/' in s)
     c.set_link_rule(
-        lambda soup: soup.findAll('a', attrs={"href": re.compile(".*store\.steampowered\.com.*")})
+        lambda link: re.search(".*store\.steampowered\.com.*", link) is not None
     )
     c.set_content_rule(
         'name',
