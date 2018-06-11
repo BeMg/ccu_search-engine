@@ -132,7 +132,7 @@ class storage:
         self.tag_name = []
         self.table_name = ''
 
-    def set_filename(self, filename):
+    def set_filename(self, filensame):
         self.filename = filename
 
     def set_table_name(self, table_name):
@@ -204,47 +204,6 @@ class crawl:
 
     def set_start_link(self, link):
         self.start_links.append(link)
-
-    def run(self):
-        s = storage()
-        s.set_filename(self.filename)
-        s.set_table_name('data')
-        s.create_db(self.tag_name)
-
-        f = fetcher()
-        p = parser()
-        p.set_root_link(self.root_link)
-        p.set_link_rule(self.link_rule)
-        p.set_tag_rule(self.tag_rule)
-
-        for start_link in self.start_links:
-            self.wait_q.put(start_link)
-            self.used_link.add(start_link)
-
-        while not self.wait_q.empty():
-            curr = self.wait_q.get()
-            print(curr)
-            try:
-                soup = f.getsoup(curr)
-
-                if self.link_checker(curr):
-                    data = p.anaysis_content(soup)
-                    s.insert_db([data])
-                else:
-                    pass
-
-                link = p.anaysis_link(soup)
-                for i in link:
-                    if i in self.used_link:
-                        pass
-                    else:
-                        self.wait_q.put(i)
-                        self.used_link.add(i)
-            except :
-                print("FAIL")
-                f.restart()
-                self.wait_q.put(curr)
-
     def get_content(self, link, cnt , f, p, q):
         try:
             rst = p.anaysis_content(f.getsoup(link))
@@ -262,7 +221,7 @@ class crawl:
         print("{} DONE".format(cnt))
 
 
-    def run_with_mutilttab(self, n_core=MP.cpu_count()):
+    def run(self, n_core=MP.cpu_count()):
         s = storage()
         s.set_filename(self.filename)
         s.set_table_name('data')
@@ -359,4 +318,4 @@ if __name__=='__main__':
         'about',
         lambda s: s.find('div', id='game_area_description').text
     )
-    c.run_with_mutilttab(10)
+    c.run(10)s
