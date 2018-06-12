@@ -11,7 +11,7 @@ import multiprocessing as MP
 class fetcher:
     def __init__(self):
         options = Options()
-        # options.add_argument("--headless")
+        options.add_argument("--headless")
         self.driver = webdriver.Chrome(chrome_options=options)
         self.driver.set_page_load_timeout(20)
 
@@ -132,7 +132,7 @@ class storage:
         self.tag_name = []
         self.table_name = ''
 
-    def set_filename(self, filensame):
+    def set_filename(self, filename):
         self.filename = filename
 
     def set_table_name(self, table_name):
@@ -318,4 +318,4 @@ if __name__=='__main__':
         'about',
         lambda s: s.find('div', id='game_area_description').text
     )
-    c.run(10)s
+    c.run(10)
