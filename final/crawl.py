@@ -1,6 +1,6 @@
 import asyncio
 from pyppeteer import launch
-
+from random import shuffle
 import bs4
 import queue
 import sqlite3
@@ -170,7 +170,7 @@ class crawl:
             q.put((link, cnt, None))
         print("{} DONE".format(cnt))
 
-    def run(self, n_core=4):
+    def run(self, n_core=4, counter_limit=1500):
         s = storage()
         s.set_filename(self.filename)
         s.set_table_name('data')
@@ -185,6 +185,8 @@ class crawl:
             self.wait_q.put(start_link)
             self.used_link.add(start_link)
 
+        cnt = 0
+
         while not self.wait_q.empty():
             curr_link = []
             for i in range(n_core):
@@ -193,6 +195,7 @@ class crawl:
                 else:
                     curr_link.append(self.wait_q.get())
             task = [get(i) for i in curr_link]
+            cnt += len(curr_link)
             try:
                 rst = asyncio.get_event_loop().run_until_complete(asyncio.wait(task))
             except Exception as e:
@@ -220,6 +223,16 @@ class crawl:
                 except Exception as e:
                     print(str(e))
                     continue
+
+            if cnt > counter_limit:
+                cnt = 0
+                self.used_link.clear()
+                tmp = [self.wait_q.get() for x in range(self.wait_q.qsize())]
+                shuffle(tmp)
+                for x in range(counter_limit // 10):
+                    self.used_link.add(tmp[x])
+                    self.wait_q.put(tmp[x])
+
 
 
 if __name__ == '__main__':

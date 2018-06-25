@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>search engine hw1</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        em {
+            color: 	#DC143C;
+        }
+	.game-card {
+	width: 650px;
+	height: 200px;
+	padding: 20px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 30px;
+	background-color: #eee;
+	overflow: hidden;
+	letter-spacing: 1px;
+	font-weight: 100;
+
+	color: #666;
+
+	border: solid 1px rgba(0, 0, 0, 0.15);
+	border-radius: 6px;
+
+	box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+	display: inline
+}
+
+.title {
+	font-family: 微軟正黑體;
+	font-size: 30px;
+}
+
+.price {
+/* 	float: right !important; */
+	font-size: 30px;
+	margin-left: 20px;
+	color: red;
+}
+
+li {
+	display: inline-block;
+	border: solid 1px rgba(0, 0, 0, 0.15);
+	padding: 5px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 10px;
+	background-color: #DDDDDD;
+	border-radius: 6px;
+}
+
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type=text/javascript>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+    <script>
+        var start_point = 0;
+        var processing = false;
+        $(document).ready(function(){
+            
+            $('#usr').keypress(function(e){
+                if(e.keyCode==13)
+                $('#btn1').click();
+            });
+
+            $("#btn1").click(function(){
+                start_point = 0;
+                $.getJSON($SCRIPT_ROOT + '/search', {
+                    keyword: $('input[name="keyword"]').val(),
+                    start: start_point,
+                }, function(data) {
+                    $('#list-result').empty()
+                    for(i=0; i<data.res.length; i++) {
+                        html = "";
+                        html += "<div class='game-card'>";
+                        html += "<div>";
+                        html += "<h1 class='title'>";
+                        html += "<a id=name" + i + " href=" + data.res[i]._source.link + ">" + "  </a>";
+                        html += "</h1>";
+                        html += "<h1 class='price'> NT$" + data.res[i]._source.price +"</h1>";
+                        html += "</div>";
+                        html += "<ul>";
+
+                        var tags = data.res[i]._source.tags.split(", ");
+                        for(j=0; j<Math.min(tags.length, 13); j++) {
+                            html += "<li>";
+                            html += tags[j];
+                            html += "</li>";
+                        }
+
+                        html += "</ul>";
+                        html += "</div>";
+                        html += "</div>";
+                        html += "</div>";
+                        $('#list-result').append(html);
+                        var tmp = "#name" + i;
+                        $(tmp).text(data.res[i]._source.name)
+                        console.log(data.res[i]._source.name)
+                    }
+                    $("#btn2").show();
+
+                });
+            });
+
+            $("#btn2").click(function(){
+                start_point += 10
+                $.getJSON($SCRIPT_ROOT + '/search', {
+                    keyword: $('input[name="keyword"]').val(),
+                    start: start_point,
+                }, function(data) {
+                    $('#list-result').empty()
+                    for(i=0; i<data.res.length; i++) {
+                        html = "";
+                        html += "<div class='game-card'>";
+                        html += "<div>";
+                        html += "<h1 class='title'>";
+                        html += "<a href=" + data.res[i]._source.link + ">";
+                        html += data.res[i]._source.name;
+                        html += "</a>"
+                        html += "</h1>";
+                        html += "<h1 class='price'> NT$" + data.res[i]._source.price +"</h1>";
+                        html += "</div>";
+                        html += "<ul>";
+
+                        var tags = data.res[i]._source.tags.split(", ");
+                        console.log(tags);
+                        for(j=0; j<Math.min(tags.length, 13); j++) {
+                            html += "<li>";
+                            html += tags[j];
+                            html += "</li>";
+                        }
+
+                        html += "</ul>";
+                        html += "</div>";
+                        html += "</div>";
+                        html += "</div>";
+                        $('#list-result').append(html);
+                        $(window).scrollTop(0);
+                    }
+                });
+            });
+
+        });
+    </script>    
+</head>
+
+<body>
+
+    <div class="row">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-3">
+            <div class="form-group">
+                <input type="text" class="form-control" id="usr" name="keyword" form="input">
+            </div>
+        </div>
+                <div class="col-sm-2">
+            <button type="button" class="btn" id="btn1">Search</button>
+        </div>
+
+    </div>
+
+    <div>
+        <p id="text1"> </p>
+    </div>
+
+    <div id="list-result">
+
+    </div>
+    
+    <div class="row">
+        <div class="col-sm-1"></div>
+        <div class="col-sm-8">
+            <button type="button" class="btn" id="btn2" style="display:none;">Next</button>        
+        </div>
+        <div class="col-sm-2"></div>
+    </div>
+    
+</body>
+
+</html>

@@ -14,15 +14,15 @@ c.set_content_rule(
 )
 c.set_content_rule(
     'price',
-    lambda s: re.search('<span\ class="_price">(\ |\n)+([0-9]|\.)+(\ |\n)+</span>', s.prettify()).group()[21:-7].strip()
+    lambda s: str(float(re.search('<span\ class="_price">(\ |\n)+([0-9]|\.)+(\ |\n)+</span>', s.prettify()).group()[21:-7].strip())*30)
 )
 c.set_content_rule(
     'discount',
-    lambda s: s.find('span', {'class': 'buy-price__new'}).text
+    lambda s: str(float(s.find('span', {'class': 'buy-price__new'}).text)*30)
 )
 c.set_content_rule(
-    'all_text',
-    lambda s: s.get_text()
+    'feature',
+    lambda s: ", ".join([i.text.strip() for i in s.findAll('span', {'class': 'game-features__title'})])
 )
 
 c.run(1)
